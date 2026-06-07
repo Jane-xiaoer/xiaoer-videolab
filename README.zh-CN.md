@@ -68,10 +68,13 @@ Xiaoer VideoLab 反着来：
 | | 网站 |
 |---|---|
 | **✅ 已实测确认** | **YouTube · Vimeo · B站 · 抖音 · 小红书** |
-| **✅ 支持**(yt-dlp 有提取器,同一条路) | X/Twitter · 微博 · 知乎 · 西瓜视频 · Instagram · Reddit · Dailymotion · Facebook · TikTok\* · …还有约 1860 个 |
+| **✅ 支持**(yt-dlp 有提取器,同一条路) | X/Twitter · 西瓜视频 · Instagram · Reddit · Dailymotion · Facebook · TikTok\* · …还有约 1860 个 |
 | **⚠️ 仅免费内容** | 优酷 · 爱奇艺 —— VIP / DRM 付费剧集下不了 |
+| **🚫 不推荐** | **微博 · 知乎** —— 见下方说明 |
 | **❌ 不支持** | 快手、腾讯视频 —— 无提取器;**视频号** —— 微信 App 内 + 加密 |
 
+> 🚫 **微博 / 知乎 —— 不推荐。** 它们的网页是**综合信息流**(很像 TikTok):视频只是一大张页面里的一小块,你**没法单独打开一个视频、拿到它自己的网址**。没有干净的"单条视频地址"可抓,按钮就无从下手——所以建议跳过。
+>
 > \* **TikTok / 海外站**需要能正常访问它们的网络(国内需代理;注意部分机房 IP 会被 TikTok 的 API 拦截)。
 >
 > 🎯 **想下视频号 / 快手 / 小程序 / 直播流?** 这些藏在 App 里、要靠抓包,推荐用 [**res-downloader**](https://github.com/putyy/res-downloader)。本工具专注 yt-dlp 这一大类。
@@ -274,6 +277,8 @@ curl -X POST http://127.0.0.1:7788/download \
 # 卸载服务
 ./scripts/uninstall.sh
 ```
+
+> 🔄 **yt-dlp 内核每周自动更新**(launchd 定时任务,每周日凌晨 4 点;日志 `~/Library/Logs/xiaoer-videolab-ytdlp-update.log`),网站改版了也能跟上,你什么都不用做。想立刻更新:`bash scripts/auto-update-ytdlp.sh`。(VideoLab 自身的代码更新仍是手动 `./scripts/update.sh`。)
 
 ## 安全
 

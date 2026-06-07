@@ -99,6 +99,29 @@ PLIST
 
 launchctl load "$PLIST_DST"
 
+# ── Weekly auto-update of the yt-dlp engine (keeps fast-moving sites working) ──
+UPD_LABEL="com.xiaoer.videolab.ytdlp-update"
+UPD_PLIST="$HOME/Library/LaunchAgents/$UPD_LABEL.plist"
+launchctl unload "$UPD_PLIST" 2>/dev/null || true
+cat > "$UPD_PLIST" <<UPDPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$UPD_LABEL</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>$PROJECT_DIR/scripts/auto-update-ytdlp.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict><key>Weekday</key><integer>0</integer><key>Hour</key><integer>4</integer><key>Minute</key><integer>0</integer></dict>
+  <key>RunAtLoad</key><false/>
+</dict>
+</plist>
+UPDPLIST
+launchctl load "$UPD_PLIST" && echo "→ Weekly yt-dlp auto-update scheduled (Sun 4am)"
+
 # ── Native Messaging Host for one-click daemon start from the extension ──
 # NOTE: com.xiaoer.videolab.json has a hardcoded allowed_origins extension ID
 # (objlebheicdclpopinghmbnfdilkmhpd). If you load the extension from a
