@@ -23,6 +23,7 @@ const LOCALES = {
     daemonError: "Daemon returned {code}", daemonOfflineMsg: "Cannot reach daemon",
     douyinGrabbing: "Reading the playing video...",
     douyinPlayFirst: "Couldn't read the video — wait for it to load, then retry",
+    feedNoVideo: "No video on screen — scroll a video into view (or open the post), then retry",
     fileNotFound: "File no longer exists on disk",
     cancel: "Remove", remove: "Remove from list", clearAll: "Clear", clearConfirm: "Clear all records?",
     justNow: "just now", minAgo: "{n} min ago", hrAgo: "{n} hr ago", dayAgo: "{n} day ago",
@@ -42,6 +43,7 @@ const LOCALES = {
     daemonError: "服务返回 {code}", daemonOfflineMsg: "无法连接到 daemon",
     douyinGrabbing: "正在读取正在播放的视频...",
     douyinPlayFirst: "没读到视频(可能还在加载)，稍等一两秒再点一次",
+    feedNoVideo: "屏幕上没找到视频——把视频滑到屏幕里(或点开那条帖子)再点一次",
     fileNotFound: "文件已不存在于磁盘",
     cancel: "移除", remove: "从列表移除", clearAll: "清空", clearConfirm: "清空全部记录？",
     justNow: "刚刚", minAgo: "{n} 分钟前", hrAgo: "{n} 小时前", dayAgo: "{n} 天前",
@@ -106,7 +108,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     // ALWAYS re-enable the button when the probe finishes — even on timeout/error
     // (hasVideo === null). Otherwise a slow/failed probe leaves it stuck on "检测中".
-    probeVideo(currentTabUrl)
+    // Feed pages (x.com/home…) aren't a video URL; probing them just burns a yt-dlp run.
+    (feedSiteFor(currentTabUrl) ? Promise.resolve(null) : probeVideo(currentTabUrl))
       .then(hasVideo => {
         setBtnLabel(t("download"), false);
         if (hasVideo === false) btn.title = "No video detected, you can still try";
@@ -346,9 +349,76 @@ async function onDownload() {
   const site = directSiteFor(currentTabUrl);
   if (site) {
     await startDirectDownload(site);
-  } else {
-    await startDownload(currentTabUrl, currentTabTitle);
+    return;
   }
+  // Feed sites: the tab URL is a timeline (x.com/home), not the video. Find the post
+  // whose video is playing / on screen and hand yt-dlp that post's own URL.
+  const feed = feedSiteFor(currentTabUrl);
+  if (feed) {
+    const found = await resolveFeedPost(feed);
+    if (found) return startDownload(found.url, found.title);
+    if (!feed.isPostUrl(currentTabUrl)) {
+      showMsg(t("feedNoVideo"), "error");
+      return;
+    }
+  }
+  await startDownload(currentTabUrl, currentTabTitle);
+}
+
+// ── feed sites ────────────────────────────────────────
+// yt-dlp handles the single-post URL fine; we only need to find it. `find` is injected
+// into the page (self-contained) and returns { url, title } or null.
+const FEED_SITES = [
+  {
+    name: "x",
+    host: /(^|\.)(x|twitter)\.com$/i,
+    isPostUrl: (url) => /\/status\/\d+/.test(url),
+    find: findXPostWithVideo,
+  },
+];
+
+function feedSiteFor(url) {
+  const host = safeUrl(url, (u) => u.hostname) || "";
+  return FEED_SITES.find((s) => s.host.test(host)) || null;
+}
+
+async function resolveFeedPost(feed) {
+  try {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const injection = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: feed.find });
+    return (injection && injection[0] && injection[0].result) || null;
+  } catch { return null; }
+}
+
+// Injected into an X/Twitter tab. Picks the playing video, else the one most on screen,
+// and returns the URL of the tweet that owns it. Each tweet is an <article>; its
+// timestamp is wrapped in a link to /<user>/status/<id>. A quoted tweet sits inside the
+// outer article with its own timestamp, so take the last status link *before* the video.
+function findXPostWithVideo() {
+  const vh = window.innerHeight;
+  const onScreen = (el) => {
+    const r = el.getBoundingClientRect();
+    return Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+  };
+  const videos = [...document.querySelectorAll("article video")]
+    .map((v) => { const seen = onScreen(v); return { v, score: seen && seen + (v.paused ? 0 : 1e6) }; })
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  for (const { v } of videos) {
+    const article = v.closest("article");
+    let best = null;
+    for (const a of article.querySelectorAll('a[href*="/status/"]')) {
+      if (!a.querySelector("time")) continue;
+      if (a.compareDocumentPosition(v) & Node.DOCUMENT_POSITION_FOLLOWING) best = a;
+    }
+    const m = best && best.getAttribute("href").match(/^\/([^/]+)\/status\/(\d+)/);
+    if (!m) continue;
+    const text = article.querySelector('[data-testid="tweetText"]');
+    const title = ((text && text.innerText) || "").replace(/\s+/g, " ").trim().slice(0, 80);
+    return { url: `https://x.com/${m[1]}/status/${m[2]}`, title: title || `${m[1]}_${m[2]}` };
+  }
+  return null;
 }
 
 // ── direct-grab sites ─────────────────────────────────

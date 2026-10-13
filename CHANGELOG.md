@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.4 — 2026-10-13
+
+- **X/Twitter: download from the timeline.** Clicking on `x.com/home` (or a profile / search / bookmarks
+  page) used to send the timeline URL to yt-dlp → `Unsupported URL`. The popup now reads the page, picks
+  the video that is playing (or most on screen), and downloads *that tweet's* `/status/` URL. Quoted
+  tweets resolve to the inner tweet. If no video is on screen, it says so instead of failing silently.
+  Timeline pages also skip the useless `/probe` call.
+
 ## 1.2.0 — 2026-06-05
 
 - **One-command updater: `./scripts/update.sh`.** Pulls the latest code, updates the yt-dlp engine to

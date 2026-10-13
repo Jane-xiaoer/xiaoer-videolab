@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Xiaoer VideoLab",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "description": "One click on the toolbar grabs the current page's video into ~/Downloads, via a local yt-dlp daemon. 一键把当前页视频抓到本地。",
   "permissions": [
     "activeTab",
